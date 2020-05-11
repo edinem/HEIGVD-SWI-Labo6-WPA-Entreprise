@@ -50,45 +50,127 @@ rfkill unblock wlan
 Dans cette première partie, vous allez analyser [une connexion WPA Entreprise](files/auth.pcap) avec Wireshark et fournir des captures d’écran indiquant dans chaque capture les données demandées.
 
 - Comparer [la capture](files/auth.pcap) au processus d’authentification donné en théorie (n’oubliez pas les captures d'écran pour illustrer vos comparaisons !). En particulier, identifier les étapes suivantes :
-	- Requête et réponse d’authentification système ouvert
- 	- Requête et réponse d’association (ou reassociation)
-	- Négociation de la méthode d’authentification entreprise
-	- Phase d’initiation. Arrivez-vous à voir l’identité du client ?
-	- Phase hello :
-		- Version TLS
-		- Suites cryptographiques et méthodes de compression proposées par le client et acceptées par l’AP
-		- Nonces
-		- Session ID
-	- Phase de transmission de certificats
-	 	- Echanges des certificats
-		- Change cipher spec
-	- Authentification interne et transmission de la clé WPA (échange chiffré, vu comme « Application data »)
-	- 4-way handshake
+
+  - Requête et réponse d’authentification système ouvert
+
+    Ci-dessous, une capture d'écran présentant l'étape *Open System Authentification* présentée dans le cours. 
+
+    ![](./images/ex1/authentification.png)
+
+   	- Requête et réponse d’association (ou reassociation)
+  	
+  	Ci-dessous, une capture d'écran présentant l'étape *Association* présentée dans le cours. 
+  	
+  	![](./images/ex1/association.png)
+  	
+  - Négociation de la méthode d’authentification entreprise
+
+    Ci-dessous, une capture d'écran présentant l'étape de la négociation de la méthode d'authentification entre le client et le serveur. 
+
+    ![](./images/ex1/methode_auth.png)
+
+  - Phase d’initiation. Arrivez-vous à voir l’identité du client ?
+
+    Comme on peut le voir ci-dessous, l'identité du client qui souhaite se connecté est "*einet\joel.gonina*". 
+
+    ![](./images/ex1/methode_auth2.png)
+
+  - Phase hello :
+
+    Ci-dessous, deux captures d'écran présentant les informations de la phase Hello du client et du serveur. On discutera plus bas les informations trouvées dans ces dernières.
+
+    **Client : **
+
+    ![](./images/ex1/client_hello.png)
+
+    **Server :**
+
+    ![](./images/ex1/server_hello.png)
+
+    - Version TLS
+
+      La version de TLS utilisée est la 1.0 mais le client demande de passer sur la version 1.2. Cependant, nous pouvons remarquer que le serveur indique au client que la version utilisée pour les futurs échanges sera la 1.0.
+
+    - Suites cryptographiques et méthodes de compression proposées par le client et acceptées par l’AP
+
+      Ci-dessous, une capture d'écran présentant les ciphersuites supportées par le client : 
+
+      ![](./images/ex1/ciphersuites_client.png)
+
+      Le serveur a indiqué, au travers du *Server Hello* que la ciphersuite utilisée sera *TLS_RSA_WITH_AES_256_CBC_SHA*.
+
+    - Nonces
+
+      Les nonces peuvent se trouver sous les champs "Random" du *Client Hello* et *Server Hello*.
+
+    - Session ID
+
+      Les sessions ID peuvent se trouver sous les champs "Session ID" du *Client Hello* et *Server Hello*.
+
+  - Phase de transmission de certificats
+      - Echanges des certificats
+
+      Ci-dessous, on peut voir que le serveur envoie trois certificats au client : 
+
+      ![](./images/certificats.png)
+
+    - Change cipher spec
+
+      Ci-dessous, une capture présentant la capture d'écran du paquet "*Change Cipher Spec*". Il permet de repréciser l'algorithme à utiliser pour les futurs messages chiffrés et contient un *Handshake* chiffré qui est le hash de tous les messages précédemment échangés entre le client et le serveur durant la négociation TLS. 
+
+      ![](./images/ex1/cipher_spec.png)
+
+  - Authentification interne et transmission de la clé WPA (échange chiffré, vu comme « Application data »)
+
+    Ci-dessous, la capture d'écran présentant l'authentification interne et la transmission de la clé WPA.
+
+    ![](./images/ex1/application_data.png)
+
+  - 4-way handshake
+
+    Ci-dessous, une capture d'écran présentant le 4-way handshake entre le client et le serveur.
+
+    ![](./images/ex1/4-way-handshake.png)
 
 ### Répondez aux questions suivantes :
- 
+
 > **_Question :_** Quelle ou quelles méthode(s) d’authentification est/sont proposé(s) au client ?
-> 
-> **_Réponse :_** 
+>
+> **_Réponse :_** Lors du premier échange, l'AP propose la méthode d'authentification EAP-TLS. Cependant, le client va refuser cette méthode et demander d'utiliser la méthode d'authentification EAP-PEAP.
+>
+> Ci-dessous, une capture d'écran présentant le paquet où l'AP demande d'utiliser EAP-TLS : 
+>
+> ![](./images/eap-tls.png)
+>
+> Ci-dessous, une capture d'écran présentant le paquet où le client demande d'utiliser EAP-PEAP : 
+>
+> ![](./images/request-eap-peap.png)
 
 ---
 
 > **_Question:_** Quelle méthode d’authentification est finalement utilisée ?
-> 
-> **_Réponse:_** 
+>
+> **_Réponse:_** Comme mentionné précédemment, le client a demandé d'utiliser EAP-PEAP et c'est cette méthode qui sera utilisée.
+>
+> ![](./images/eap-peap-request.png)
 
 ---
 
 > **_Question:_** Lors de l’échange de certificats entre le serveur d’authentification et le client :
-> 
+>
 > - a. Le serveur envoie-t-il un certificat au client ? Pourquoi oui ou non ?
+>
+> **_Réponse:_** Oui, il en envoit même trois : le sien, et deux autres certificats de l'issuer de celui du serveur. Ainsi, le client pourra valider le certificat reçu. Le serveur envoit son certificat afin de pouvoir valider son identité auprès du client. Cela permet d'éviter des attaques de type MITM par exemple. 
+>
+>   Ci-dessous, la capture d'écran présentant le paquet contenant les trois certificats :
+>
+> ![](./images/certificats.png)
+>
 > 
-> **_Réponse:_**
-> 
+>
 > - b. Le client envoie-t-il un certificat au serveur ? Pourquoi oui ou non ?
-> 
-> **_Réponse:_**
-> 
+>
+> **_Réponse:_** Non le client n'envoit pas de certificat au serveur car cette méthode d'authentification repose sur des identifiants (uesrname:password). Contrairement à EAP-TLS qui repose sur des certificats afin d'authentifier les clients et le serveur.  
 
 ---
 
